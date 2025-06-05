@@ -114,10 +114,10 @@ class ACAgent:
                 probs = probs * decay
                 probs = probs / probs.sum()
 
-            # if eval_mode:
-            #     action = probs.argmax(dim=-1).item()
-            # else:
-            action = Categorical(probs).sample().item()
+            if eval_mode:
+                action = probs.argmax(dim=-1).item()
+            else:
+                action = Categorical(probs).sample().item()
             return action
 
     def update_critic(self, replay_iter):
