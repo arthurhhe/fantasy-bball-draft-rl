@@ -16,7 +16,7 @@ def build_net(layer_shape, hidden_activation, output_activation):
 class Double_Q_Net(nn.Module):
 	def __init__(self, obs_dim, action_dim, hidden_dim):
 		super(Double_Q_Net, self).__init__()
-		layers = [obs_dim] + [hidden_dim, hidden_dim] + [action_dim]
+		layers = [obs_dim] + ([hidden_dim] * 8) + [action_dim]
 
 		self.Q1 = build_net(layers, nn.ReLU, nn.Identity)
 		self.Q2 = build_net(layers, nn.ReLU, nn.Identity)
@@ -29,7 +29,7 @@ class Double_Q_Net(nn.Module):
 class Policy_Net(nn.Module):
 	def __init__(self, obs_dim, action_dim, hidden_dim):
 		super(Policy_Net, self).__init__()
-		layers = [obs_dim] + [hidden_dim, hidden_dim] + [action_dim]
+		layers = [obs_dim] + ([hidden_dim] * 8) + [action_dim]
 		self.P = build_net(layers, nn.ReLU, nn.Identity)
 
 	def forward(self, s):

@@ -15,9 +15,8 @@ class GymEnv(gym.Env): # Fantasy Draft game as gym environment
         self.all_player_names = [p['Player'] for p in self.players_stats_original]
         self.action_space = spaces.Discrete(len(self.all_player_names))  # pick index from player list
         # self.observation_space = spaces.Box(low=0, high=1, shape=(len(self.all_player_names),), dtype=np.int8)
-        obs_dim = len(self.all_player_names) + (self.num_teams * len(CATS)) + 1
+        obs_dim = len(self.all_player_names) + (self.num_teams * len(CATS)) + 2
         self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(obs_dim,), dtype=np.float32)
-        self.reset()
 
     def reset(self):
         self.teams = create_teams(self.num_teams, self.num_teams - 1)
@@ -34,7 +33,6 @@ class GymEnv(gym.Env): # Fantasy Draft game as gym environment
         round_num = len(self.teams[self.rl_team_index].roster)
         pick_order = self.snake_order(self.rl_team_index, round_num)
         reward = 0
-
         for team_i in pick_order:
             if (len(self.teams[team_i].roster) >= self.roster_size):
                 continue
@@ -49,15 +47,16 @@ class GymEnv(gym.Env): # Fantasy Draft game as gym environment
                     self.available[action] = 0
             # Simulate other team pick
             else:
-                if (len(self.teams[team_i].roster) < 5): self.top_n_random_pick(team_i, 5)
-                else: self.top_n_random_pick(team_i, 10)
+                if (len(self.teams[team_i].roster) < 2): self.top_n_random_pick(team_i, 5)
+                elif (len(self.teams[team_i].roster) < 5): self.top_n_random_pick(team_i, 10)
+                else: self.top_n_random_pick(team_i, 30)
 
         # Check if draft is over
         done = self._check_done()
         reward += self._evaluate_team(done)
         if done:
             for team in self.teams:
-                assert len(team.roster) == self.roster_size, f"Team {team.name} has too many players ({len(team.roster)})"
+                assert len(team.roster) == self.roster_size, f"{team.name} has too many players ({len(team.roster)})"
 
         return self._get_obs(), reward, done, {}
 
@@ -78,8 +77,6 @@ class GymEnv(gym.Env): # Fantasy Draft game as gym environment
         return sequence
 
     def _initial_step(self):
-        if (len(self.teams[0].roster)):
-            return self._get_obs(), 0, False, {}
         pick_order = list(range(self.num_teams))
         for team_i in pick_order:
             if team_i == self.rl_team_index:
@@ -105,7 +102,7 @@ class GymEnv(gym.Env): # Fantasy Draft game as gym environment
 
     def _get_league_stats_obs(self):
         if not self.teams[self.rl_team_index].scored_total_stats:
-            return np.zeros((len(self.teams) * len(CATS)) + 1, dtype=np.float32)
+            return np.zeros((len(self.teams) * len(CATS)) + 2, dtype=np.float32)
         
         stats = np.array([self.teams[self.rl_team_index].scored_total_stats[cat] for cat in CATS], dtype=np.float32)
         
@@ -122,4 +119,4 @@ class GymEnv(gym.Env): # Fantasy Draft game as gym environment
                 rank_idx = i
                 break
         
-        return np.concatenate([stats, np.array([float(rank_idx)])], dtype=np.float32)
+        return np.concatenate([stats, np.array([float(rank_idx), float(self.rl_team_index)])], dtype=np.float32)

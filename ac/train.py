@@ -4,10 +4,10 @@ import numpy as np
 import torch
 from game.reward_values import REWARD_WIN_BUFFER_THRESHOLD
 
-def train_agent(env, agent, buffer, win_buffer, episodes=10000, batch_size=128, warmup_episodes=2000, updates_per=20, update_every=50, log_dir='runs'):
+def train_agent(env, agent, buffer, win_buffer, episodes=10000, batch_size=128, warmup_episodes=2000, updates_per=20, update_every=50, log_dir='runs', log_suffix=''):
     start_time = time.time()
     episode_rewards = []
-    writer = SummaryWriter(log_dir=f"{log_dir}/ac/{time.strftime('%Y%m%d-%H%M%S')}")
+    writer = SummaryWriter(log_dir=f"{log_dir}/ac/{time.strftime('%Y%m%d-%H%M%S')}_{log_suffix}")
     global_step = 0
     episode = 0
 
@@ -54,6 +54,8 @@ def train_agent(env, agent, buffer, win_buffer, episodes=10000, batch_size=128, 
                         critic_batch = tuple(torch.cat([a, b], dim=0) for a, b in zip(critic_batch_main, critic_batch_win))
                         actor_batch = tuple(torch.cat([a, b], dim=0) for a, b in zip(actor_batch_main, actor_batch_win))
 
+                    # critic_batch = buffer.sample(batch_size)
+                    # actor_batch = buffer.sample(batch_size)
                     try:
                         critic_metrics = agent.update_critic(critic_batch)
                         actor_metrics = agent.update_actor(actor_batch)
@@ -72,8 +74,8 @@ def train_agent(env, agent, buffer, win_buffer, episodes=10000, batch_size=128, 
         if episode % 100 == 0 and step % env.roster_size == 0:
             print(f"Episodes: {episode}, Buffer Size: {len(buffer)}, Win Buffer Size: {len(win_buffer)}, Step: {step}, Time Elapsed: {time.time() - start_time}")
         if episode % 100 == 0  and step % env.roster_size == 0:
-            eval_reward = evaluate_agent(env, agent)
-            writer.add_scalar("Eval/AvgReward", eval_reward, step)
+            eval_reward = evaluate_agent(env, agent, print_to=episode > (0.98 * episodes))
+            writer.add_scalar("Eval/AvgReward", eval_reward, episode)
             print(f"[Episodes: {episode}] Eval Reward: {eval_reward:.2f}")
 
         global_step += 1
@@ -81,16 +83,20 @@ def train_agent(env, agent, buffer, win_buffer, episodes=10000, batch_size=128, 
     writer.close()
     return episode_rewards
 
-def evaluate_agent(env, agent, episodes=10):
+def evaluate_agent(env, agent, episodes=10, print_to=False):
     total_reward = 0
     for _ in range(episodes):
         obs = env.reset()
         done = False
+        episode_reward = 0
         while not done:
             action = agent.act(obs, eval_mode=True)
             next_obs, reward, done, _ = env.step(action)
             total_reward += reward
+            episode_reward += reward
             obs = next_obs
             assert not np.isnan(reward), "NaN reward"
             assert not np.any(np.isnan(obs)), "NaN in observation"
+        if print_to:
+            print("Win:" if episode_reward >= .50 else "Lose:", env.teams[env.rl_team_index].roster)
     return total_reward / episodes

@@ -37,10 +37,10 @@ PLAYER_STATS_CSV_PATH = 'data/nba_players_stats_2025_finalized.csv'
 #         return f"{self.name}"
 
 class Team:
-    def __init__(self, name, team_type='random'):
+    def __init__(self, name, team_type='random', roster=None):
         self.name = name
         self.team_type = team_type
-        self.roster = []
+        self.roster = roster if roster is not None else []
         self.draft_position = -1
         self.scored_total_stats = None
         self.scored_wins = 0
