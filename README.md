@@ -1,6 +1,8 @@
 # fantasy-bball-draft-rl
 RL agent for 9cat fantasy bball draft
 
+Github repo: https://github.com/arthurhhe/fantasy-bball-draft-rl/tree/main
+
 ## Training commands
 Discrete SAC
 ```
